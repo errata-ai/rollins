@@ -10,14 +10,9 @@ use syntect::easy::ScopeRegionIterator;
 
 use ast::{MarkupSelectors, Node, NodeState};
 
-fn should_terminate(state: &mut NodeState, sel: &MarkupSelectors, scope: String, inline: bool, text: &str) -> bool {
-    let blank = state.line.chars().all(|c| c.is_whitespace());
-    println!("With text:\n{} is {}", text, inline);
-    if state.block == 1 && (scope != state.top || blank) {
-        if !inline || (state.top == sel.paragraph && scope == sel.quote) {
-            return true;
-        }
-    } else if state.block == 2 && text.ends_with("\n") {
+fn should_terminate(state: &mut NodeState, text: &str) -> bool {
+    let blank = state.line.chars().all(|c| c == '\n');
+    if (state.block == 1 && blank) || state.block == 2 && text.ends_with("\n") {
         return true;
     }
     return false;
@@ -31,9 +26,9 @@ fn make_node(
 ) -> Option<Node> {
     let sliced = stack.as_slice();
     let scope = sliced.last().unwrap().to_string();
-    let inline = sel.inline.does_match(sliced).is_some();
+    // let inline = sel.inline.does_match(sliced).is_some();
 
-    if should_terminate(state, sel, scope.clone(), inline, text)
+    if should_terminate(state, text)
     {
         // We've found the end of a block (as indicated by the
         // scope change).
@@ -73,7 +68,7 @@ fn make_node(
 pub fn md_to_ast(syntax: &SyntaxDefinition, text: &str) -> Vec<Node> {
     let sel: MarkupSelectors = MarkupSelectors {
         paragraph: "meta.paragraph.markdown".to_owned(),
-        list: "meta.paragraph.list.markdown".to_owned(),
+        list: "punctuation.definition.list_item.markdown".to_owned(),
         heading: "punctuation.definition.heading.begin.markdown".to_owned(),
         quote: "punctuation.definition.blockquote.markdown".to_owned(),
         cell: "meta.table.markdown".to_owned(),
